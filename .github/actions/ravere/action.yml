@@ -1,0 +1,68 @@
+name: RA Tag and Release
+description: Tags and publishes pre and stable releases
+inputs:
+  prerelease:
+    description: Indicator of whether or not it'll publish a prerelease (true or false), defaults to false.
+    required: false
+  files:
+    description: String with glob patterns of files that should be uploaded to the release.
+    required: false
+  name:
+    description: Name of the release, defaults to tag name
+    required: false
+  body:
+    description: Text describing the contents of the tag
+    required: false
+  draft:
+    description: Indicator of wheter or not a draft unpublished released will be created (true or false), defaults to false.
+    required: false
+  discussion_category_name: 
+    description: If specified, a discussion of the specified category is created and linked to the release. The value must be a category that already exists in the repository.
+    required: false
+  generate_release_notes:
+    description: Whether to automatically generate the name and body for this release. If name is specified, the specified name will be used; otherwise, a name will be automatically generated. If body is specified, the body will be pre-pended to the automatically generated notes (true or false), defaults to false.
+    required: false
+  
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Tag generation
+      id: tag_generation
+      uses: paulhatch/semantic-version@v5.0.3
+      with:
+        tag_prefix: "v"
+        major_pattern: (MAJOR)
+        minor_pattern: (MINOR)
+        version_format: v${major}.${minor}.${patch}
+    - name: Tag and Publish release
+      id: tag_release
+      env:
+        tag_name: ${{ steps.tag_generation.outputs.version_tag }}
+        target_commitish: ${{ github.sha }}
+        prerelease: ${{ inputs.prerelease || 'false' }}
+        files: ${{ inputs.files }}
+        name: ${{ inputs.name }}
+        body: ${{ inputs.body }}
+        draft: ${{ inputs.draft || 'false' }}
+        discussion_category_name: ${{ inputs.discussion_category_name }}
+        generate_release_notes: ${{ inputs.generate_release_notes || 'false' }}
+      uses: actions/github-script@v6
+      with:
+        retries: 3
+        script: |
+            const script = require('${{ github.action_path }}/script.js');
+            await script({github, context, core, glob});
+    - name: Only publish
+      if: ${{ false }}
+      uses: softprops/action-gh-release@v0.1.15
+      with:
+        tag_name: ${{ steps.tag_release.outputs.tag_name }}
+        target_commitish: ${{ github.sha }}
+        files: ${{ inputs.files }}
+        prerelease: ${{inputs.prerelease }}
+        name: ${{ inputs.name }}
+        body: ${{ inputs.body }}
+        draft: ${{ inputs.draft }}
+        discussion_category_name: ${{ inputs.discussion_category_name }}
+        generate_release_notes: ${{ inputs.generate_release_notes }}

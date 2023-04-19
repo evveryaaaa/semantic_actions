@@ -1,0 +1,36 @@
+name: Demo tag and release
+permissions:
+  contents: write
+  actions: write
+on:
+  pull_request:
+    types:
+    - opened
+    - synchronize
+    - closed 
+  workflow_dispatch:
+    inputs:
+      prerelease:
+        type: boolean
+        default: false
+      generate_release_notes:
+        type: boolean
+        default: false
+      draft:
+        type: boolean
+        default: false
+run-name: Demo workflow
+jobs:
+  demo-job:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/ravere
+        with:
+          prerelease: ${{ github.event.action == 'closed' && github.event.pull_request.merged == true && 'false' || 'true' }}
+          generate_release_notes: 'true'
+          draft: 'false'
+          files: |
+            README.md
